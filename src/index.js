@@ -41,7 +41,7 @@ async function runSearch() {
 
   async function getImages() {
     const response = await axios.get(
-      `https://pixabay.com/api/?key=33195419-6a100955ee108d54dc0f94ed7&q=${userSearch}&image_type=photo&orientation =horizontal&safesearch =true&page=${page}&per_page=14`
+      `https://pixabay.com/api/?key=33195419-6a100955ee108d54dc0f94ed7&q=${userSearch}&image_type=photo&orientation =horizontal&safesearch =true&page=${page}&per_page=40`
     );
     const data = response.data.hits;
 
