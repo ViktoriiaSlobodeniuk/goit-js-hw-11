@@ -9,11 +9,12 @@ const form = document.querySelector('.search-form');
 const gallery = document.querySelector('.gallery');
 const loadBtn = document.querySelector('.load-more');
 const input = document.querySelector('input');
+const theEnd = document.querySelector('.instead_load-btn');
 
 let page = 1;
 let pageCount = 0;
-
 loadBtn.style.display = 'none';
+theEnd.classList.add('is-hidden');
 
 form.addEventListener('submit', evt => {
   evt.preventDefault();
@@ -21,6 +22,7 @@ form.addEventListener('submit', evt => {
   pageCount = 0;
   gallery.innerHTML = '';
   loadBtn.style.display = 'none';
+  theEnd.classList.add('is-hidden');
 
   if (input.value.trim().length === 0) {
     return;
@@ -28,10 +30,7 @@ form.addEventListener('submit', evt => {
 
   runSearch()
     .then(totalHits => {
-      console.log('totalHits:', totalHits);
-
       pageCount = Math.ceil(totalHits / 40);
-      console.log('pageCount', pageCount);
 
       if (totalHits > 0) {
         Notify.success(`Hooray! We found ${totalHits} images.`);
@@ -57,18 +56,20 @@ async function runSearch() {
 
 loadBtn.addEventListener('click', () => {
   page += 1;
-  console.log('loading page', page);
   if (page >= pageCount) {
     loadBtn.style.display = 'none';
-    Notiflix.Notify.info(
-      "We're sorry, but you've reached the end of search results."
-    );
+    theEnd.classList.remove('is-hidden');
+    theEnd.classList.add('is-show');
+
+    setTimeout(() => {
+      Notiflix.Notify.info(
+        "We're sorry, but you've reached the end of search results."
+      );
+    }, 2000);
   }
   runSearch();
 });
 
-// //
-// //
 // //
 // //
 
@@ -76,10 +77,7 @@ async function getImages() {
   const response = await axios.get(
     `https://pixabay.com/api/?key=33195419-6a100955ee108d54dc0f94ed7&q=${input.value}&image_type=photo&orientation=horizontal&safesearch=true&page=${page}&per_page=40`
   );
-
   const data = response.data;
-  console.log('запит повертає:', data);
-
   return data;
 }
 
