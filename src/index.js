@@ -1,16 +1,17 @@
 import axios from 'axios';
-import { Notify } from 'notiflix';
+import Notiflix, { Notify } from 'notiflix';
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
 
-const lightbox = new SimpleLightbox('.gallery a', {
-  captionDelay: 250,
-});
+const lightbox = new SimpleLightbox('.gallery a');
 
-let page = 1;
 const form = document.querySelector('.search-form');
 const gallery = document.querySelector('.gallery');
 const loadBtn = document.querySelector('.load-more');
+const input = document.querySelector('input');
+
+let page = 1;
+let pageCount = 1;
 
 loadBtn.style.display = 'none';
 
@@ -19,87 +20,95 @@ form.addEventListener('submit', evt => {
   page = 1;
   gallery.innerHTML = '';
   loadBtn.style.display = 'none';
-  runSearch().then(elementsNumber => {
-    if (elementsNumber) {
-      loadBtn.style.display = 'block';
-    }
-  });
+
+  runSearch()
+    .then(data => {
+      console.log('data otyt:', data);
+
+      pageCount = Math.floor(data / 40);
+      if (page > pageCount) {
+        loadBtn.style.display = 'none';
+      }
+      if (data > 0) {
+        Notify.success(`Hooray! We found ${data} images.`);
+      }
+      if (data.totalHits > 40) {
+        loadBtn.style.display = 'block';
+      }
+    })
+    .catch(error => console.log(error.message));
 });
+
+// //
+// //
+async function runSearch() {
+  return await getImages(input.value).then(data => {
+    const imgArray = data.hits;
+    galleryMarkup(imgArray);
+    return data.totalHits;
+  });
+}
+// //
+// //
 
 loadBtn.addEventListener('click', () => {
   page += 1;
+  if (page > pageCount) {
+    loadBtn.style.display = 'none';
+    Notiflix.Notify.info(
+      "We're sorry, but you've reached the end of search results."
+    );
+  }
   runSearch();
 });
 
-async function runSearch() {
-  const userSearch = form.searchQuery.value.trim();
-  if (userSearch === '') {
-    loadBtn.style.display = 'none';
-    gallery.innerHTML = '';
-    return;
-  }
+// //
+// //
+// //
+// //
 
-  async function getImages() {
-    const response = await axios.get(
-      `https://pixabay.com/api/?key=33195419-6a100955ee108d54dc0f94ed7&q=${userSearch}&image_type=photo&orientation =horizontal&safesearch =true&page=${page}&per_page=40`
-    );
-    const data = response.data.hits;
+async function getImages() {
+  const response = await axios.get(
+    `https://pixabay.com/api/?key=33195419-6a100955ee108d54dc0f94ed7&q=${input.value}&image_type=photo&orientation=horizontal&safesearch=true&page=${page}&per_page=40`
+  );
 
-    return data;
-  }
+  const data = response.data;
+  console.log('запит повертає:', data);
 
-  try {
-    const data = await getImages();
+  return data;
+}
 
-    if (!data.length) {
-      Notify.failure(
-        'Sorry, there are no images matching your search query. Please try again.'
-      );
-      gallery.innerHTML = '';
-      lightbox.refresh();
-      return;
-    }
-
-    const elements = data.map(
-      ({
-        webformatURL,
-        largeImageURL,
-        tags,
-        likes,
-        views,
-        comments,
-        downloads,
-      }) => {
-        const aEl = document.createElement('a');
-        aEl.href = largeImageURL;
-        aEl.innerHTML = `<div class="photo-card">
-  <img  src="${webformatURL}" alt="${tags}" loading="lazy " />
+function galleryMarkup(imgArray) {
+  if (imgArray.length > 0) {
+    const markup = imgArray
+      .map(image => {
+        return `<a href="${image.largeImageURL}"><div class="photo-card">
+  <img  src="${image.webformatURL}" alt="${image.tags}" loading="lazy " />
   <div class="info">
     <p class="info-item">
-      <b>Likes</b>${likes}
+      <b>Likes</b>${image.likes}
     </p>
     <p class="info-item">
-      <b>Views</b>${views}
+      <b>Views</b>${image.views}
     </p>
     <p class="info-item">
-      <b>Comments</b>${comments}
+      <b>Comments</b>${image.comments}
     </p>
     <p class="info-item">
-      <b>Downloads</b>${downloads}
+      <b>Downloads</b>${image.downloads}
     </p>
   </div>
-</div>`;
-
-        return aEl;
-      }
-    );
-
-    gallery.append(...elements);
-
+</div></a>`;
+      })
+      .join('');
+    gallery.insertAdjacentHTML('beforeend', markup);
+    loadBtn.style.display = 'block';
     lightbox.refresh();
-
-    return elements.length;
-  } catch (err) {
-    console.log('error', err);
+  } else {
+    loadBtn.style.display = 'none';
+    Notify.failure(
+      'Sorry, there are no images matching your search query. Please try again.'
+    );
+    return imgArray;
   }
 }
